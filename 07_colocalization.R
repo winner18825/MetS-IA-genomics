@@ -17,6 +17,7 @@ library(coloc)
 
 WINDOW        <- 500000   # +/- bp around each lead SNP
 PP4_THRESHOLD <- 0.7      # posterior probability cut-off for colocalization
+PP4_RATIO_THRESHOLD <- 0.7 # PP.H4_ratio
 
 out_dir <- file.path(RESULTS_DIR, "coloc")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
@@ -96,11 +97,15 @@ for (i in seq_len(nrow(loci))) {
 }
 
 coloc_summary <- data.table::rbindlist(summary_rows)
-coloc_summary[, colocalized := PP.H4 > PP4_THRESHOLD]
+coloc_summary[, PP.H4_ratio := PP.H4 / (PP.H3 + PP.H4)]
+coloc_summary[, colocalized :=
+  PP.H4 > PP4_THRESHOLD &
+  PP.H4_ratio > PP4_RATIO_THRESHOLD]
 data.table::fwrite(coloc_summary,
                    file.path(out_dir, "coloc_summary.txt"), sep = "\t")
 
 cat("Colocalization complete.",
     sum(coloc_summary$colocalized), "of", nrow(coloc_summary),
-    "loci with PP.H4 >", PP4_THRESHOLD, "\n")
+    "loci satisfying both PP.H4 >", PP4_THRESHOLD,
+    "and PP.H4/(PP.H3+PP.H4) >", PP4_RATIO_THRESHOLD, "\n")
 cat("Summary table:", file.path(out_dir, "coloc_summary.txt"), "\n")
