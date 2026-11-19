@@ -63,6 +63,7 @@ for (MT in MT_TRAITS) {
   args <- c("--bfile", file.path(REF_DIR, "1kg.v3/EUR"),
             "--clump", fn,
             "--clump-p1", 5e-8,
+            "--clump-p2", 1e-5,
             "--clump-r2", 0.1,
             "--clump-kb", 1000,
             "--out", "plink_clump")
