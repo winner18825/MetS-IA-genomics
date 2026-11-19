@@ -16,7 +16,7 @@ library(data.table)
 library(coloc)
 
 WINDOW        <- 500000   # +/- bp around each lead SNP
-PP4_THRESHOLD <- 0.8      # posterior probability cut-off for colocalization
+PP4_THRESHOLD <- 0.7      # posterior probability cut-off for colocalization
 
 out_dir <- file.path(RESULTS_DIR, "coloc")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
