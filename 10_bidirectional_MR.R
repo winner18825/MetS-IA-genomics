@@ -260,18 +260,29 @@ fwrite(rbindlist(log_rows, fill = TRUE),
 if (length(all_mr) > 0) {
   df_all <- rbindlist(all_mr, fill = TRUE)
   fwrite(df_all, file.path(mr_dir, "MR_all_methods_results.txt"), sep = "\t")
-  
-  # IVW summary with Bonferroni / nominal significance grading
-  df_ivw <- df_all[method == "Inverse variance weighted"]
-  bonf   <- 0.05 / nrow(df_ivw)
-  df_ivw[, significance := fifelse(pval < bonf, "Bonferroni",
-                                   fifelse(pval < 0.05, "Nominal", "NS"))]
-  fwrite(df_ivw, file.path(mr_dir, "MR_IVW_results_summary.txt"), sep = "\t")
-  fwrite(df_ivw[pval < 0.05][order(pval)],
-         file.path(mr_dir, "MR_IVW_significant_results.txt"), sep = "\t")
-  cat("IVW: ", sum(df_ivw$significance == "Bonferroni"), "Bonferroni-significant, ",
-      sum(df_ivw$significance == "Nominal"), "nominally significant",
-      "(threshold 0.05/", nrow(df_ivw), ").\n", sep = "")
+
+# IVW summary with direction-specific BH-FDR correction
+df_ivw <- df_all[method == "Inverse variance weighted"]
+if (nrow(df_ivw) > 0) {
+  df_ivw[, direction_group := fifelse(
+    outcome %in% IA_TRAITS,"MetS_to_IA","IA_to_MetS")]
+  df_ivw[, FDR_BH := NA_real_]
+  df_ivw[is.finite(pval),
+         FDR_BH := p.adjust(pval, method = "BH"), by = direction_group]
+  df_ivw[, significance := "NS"]
+  df_ivw[is.finite(pval) & pval < 0.05, significance := "Nominal"]
+  df_ivw[is.finite(FDR_BH) & FDR_BH < 0.05, significance := "FDR"]
+  fwrite(df_ivw,
+         file.path(mr_dir, "MR_IVW_results_summary.txt"), sep = "\t")
+  fwrite(df_ivw[!is.na(FDR_BH) & FDR_BH < 0.05][order(FDR_BH)],
+         file.path(mr_dir, "MR_IVW_FDR_significant_results.txt"), sep = "\t")
+  for (d in c("MetS_to_IA", "IA_to_MetS")) {
+    tmp <- df_ivw[direction_group == d]
+    cat(d, ": ", sum(tmp$significance == "FDR", na.rm = TRUE), " FDR-significant, ",
+                 sum(tmp$significance == "Nominal", na.rm = TRUE), " nominally significant; ",
+                 nrow(tmp), " tests.\n", sep = "")
+  }
+}
 }
 if (length(all_het) > 0)
   fwrite(rbindlist(all_het, fill = TRUE),
